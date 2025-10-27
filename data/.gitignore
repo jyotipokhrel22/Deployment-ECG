@@ -1,0 +1,9 @@
+# Ignore big data and model files
+data/
+*.npy
+models/
+*.pth
+
+# Ignore Python cache and environment
+.venv
+
