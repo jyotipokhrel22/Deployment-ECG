@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import sys
 import os
+import pandas as pd
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -125,11 +126,11 @@ def predict():
             ecg_data = ecg_data[:360]
         
         # Get patient info from request
-        patient_info = {
-            'id': request.form.get('patient_id', 'N/A'),
-            'age': request.form.get('patient_age', 'N/A'),
-            'gender': request.form.get('patient_gender', 'N/A')
-        }
+        # patient_info = {
+        #     'id': request.form.get('patient_id', 'N/A'),
+        #     'age': request.form.get('patient_age', 'N/A'),
+        #     'gender': request.form.get('patient_gender', 'N/A')
+        # }
         
         # Make prediction
         result = model_service.predict(ecg_data)
@@ -163,7 +164,6 @@ def predict():
             'all_probabilities': {k: v*100 for k, v in result['all_probabilities'].items()},
             'visualization': visualization_html,
             'reconstruction_error': float(result['reconstruction_error']),
-            'patient_info': patient_info,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'attention_stats': {
                 'clinical_attention_max': float(np.max(result['clinical_attention'])),
@@ -183,26 +183,36 @@ def predict():
 
 @app.route('/demo', methods=['GET'])
 def demo():
-    """Load demo ECG data (normal, PVCs, and other abnormalities)"""
+    """Load demo ECG data (from CSV files if available, else synthetic fallback)."""
     try:
-        test_data_path = 'data/processed/X_test.npy'
+        base_path = 'data/test_datasets/csv_ecg_signal'
+        csv_files = {
+            'fusion': os.path.join(base_path, 'fusion.csv'),
+            'pvc': os.path.join(base_path, 'pvc.csv'),
+            'normal': os.path.join(base_path, 'normal.csv'),
+            'supra': os.path.join(base_path, 'supra.csv'),
+        }
 
-        demo_data = []
+        ecg_data = {}
         messages = []
 
-        if os.path.exists(test_data_path):
-            X_test = np.load(test_data_path)
-            n_samples = len(X_test)
-            sample_indices = np.random.choice(n_samples, size=5, replace=False)
+        # ✅ Load first 4 ECGs from CSV files if available
+        csv_available = all(os.path.exists(p) for p in csv_files.values())
 
-            for idx in sample_indices:
-                demo_data.append(X_test[idx].tolist())
-                messages.append(f'Demo ECG loaded from test set (sample #{idx})')
+        if csv_available:
+            for name, path in csv_files.items():
+                try:
+                    df = pd.read_csv(path, header=None)
+                    # Flatten and convert to list (1D ECG signal)
+                    ecg_signal = df.values.flatten().tolist()
+                    ecg_data[name] = ecg_signal
+                    messages.append(f'Loaded ECG from {name}.csv ({len(ecg_signal)} samples)')
+                except Exception as e:
+                    messages.append(f'Failed to load {name}.csv: {e}')
         else:
-            # Generate synthetic ECGs (fallback)
+            # ⚙️ Fallback to synthetic data generation
             t = np.linspace(0, 1, 360)
 
-            # 1️⃣ Normal ECG
             normal_ecg = (
                 np.sin(2 * np.pi * 1.2 * t) +
                 0.3 * np.sin(2 * np.pi * 2.4 * t) +
@@ -210,43 +220,40 @@ def demo():
                 0.05 * np.random.randn(360)
             )
 
-            # 2️⃣ PVC (Premature Ventricular Contraction) — wider QRS, irregular beat
-            pvc1 = (
+            pvc = (
                 np.sin(2 * np.pi * 1.0 * t) +
                 0.8 * np.sin(2 * np.pi * 45 * t) * np.exp(-((t - 0.25)**2) / 0.005) +
                 0.2 * np.random.randn(360)
             )
-            pvc2 = (
-                np.sin(2 * np.pi * 1.0 * t) +
-                1.0 * np.sin(2 * np.pi * 40 * t) * np.exp(-((t - 0.55)**2) / 0.004) +
-                0.15 * np.random.randn(360)
-            )
 
-            # 3️⃣ Other abnormality (e.g., Atrial Fibrillation–like irregularity)
-            other_abnormal = (
-                np.sin(2 * np.pi * 1.2 * t + 0.5 * np.random.randn(360)) +
-                0.2 * np.random.randn(360)
-            )
-
-            # 4️⃣ Random synthetic sample (for diversity)
-            random_mix = (
+            fusion = (
                 np.sin(2 * np.pi * 1.5 * t) +
                 0.5 * np.sin(2 * np.pi * 3 * t) +
                 0.5 * np.sin(2 * np.pi * 70 * t) * np.exp(-((t - 0.45)**2) / 0.008) +
                 0.1 * np.random.randn(360)
             )
 
-            demo_data = [normal_ecg.tolist(), pvc1.tolist(), pvc2.tolist(), other_abnormal.tolist(), random_mix.tolist()]
+            supra = (
+                np.sin(2 * np.pi * 1.2 * t + 0.5 * np.random.randn(360)) +
+                0.2 * np.random.randn(360)
+            )
+
+            ecg_data = {
+                'fusion': fusion.tolist(),
+                'pvc': pvc.tolist(),
+                'normal': normal_ecg.tolist(),
+                'supra': supra.tolist()
+            }
+
             messages = [
+                'Synthetic fusion ECG generated',
+                'Synthetic PVC ECG generated',
                 'Synthetic normal ECG generated',
-                'Synthetic PVC ECG (type 1) generated',
-                'Synthetic PVC ECG (type 2) generated',
-                'Synthetic other abnormal ECG generated',
-                'Synthetic mixed/random ECG generated'
+                'Synthetic supra ECG generated'
             ]
 
         return jsonify({
-            'demo_ecg_data': demo_data,
+            'ecg_data': ecg_data,
             'messages': messages
         })
 

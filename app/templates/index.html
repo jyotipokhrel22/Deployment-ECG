@@ -240,7 +240,7 @@
     <div class="container">
         <!-- Control Panel -->
         <div class="control-panel">
-            <h2>Patient Information</h2>
+            <!-- <h2>Patient Information</h2>
             <div class="grid">
                 <div class="patient-input">
                     <label>Patient ID</label>
@@ -259,7 +259,7 @@
                         <option value="other">Other</option>
                     </select>
                 </div>
-            </div>
+            </div> -->
 
             <h2 style="margin-top: 25px;">ECG Data Upload</h2>
             <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
@@ -598,31 +598,29 @@
         }
 
         async function analyzeECG() {
-            if (!ecgData) {
-                alert('Please upload ECG data first');
-                return;
-            }
+    if (!ecgData) {
+        alert('Please upload ECG data first');
+        return;
+    }
 
-            document.getElementById('loadingState').classList.add('show');
-            document.getElementById('resultsCard').classList.remove('show');
+    document.getElementById('loadingState').classList.add('show');
+    document.getElementById('resultsCard').classList.remove('show');
 
-            try {
-                const formData = new FormData();
-                formData.append('ecg_data', JSON.stringify(ecgData));
-                formData.append('patient_id', document.getElementById('patientId').value);
-                formData.append('patient_age', document.getElementById('patientAge').value);
-                formData.append('patient_gender', document.getElementById('patientGender').value);
+    try {
+        const formData = new FormData();
+        formData.append('ecg_data', JSON.stringify(ecgData));
+        // Patient information fields removed from formData
 
-                const response = await fetch('/predict', { method: 'POST', body: formData });
-                const result = await response.json();
-                if (result.error) throw new Error(result.error);
-                displayResults(result);
-            } catch (error) {
-                alert('Error: ' + error.message);
-            } finally {
-                document.getElementById('loadingState').classList.remove('show');
-            }
-        }
+        const response = await fetch('/predict', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (result.error) throw new Error(result.error);
+        displayResults(result);
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        document.getElementById('loadingState').classList.remove('show');
+    }
+}
 
         function displayResults(result) {
             document.getElementById('resultsCard').classList.add('show');

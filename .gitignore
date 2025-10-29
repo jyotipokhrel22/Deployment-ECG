@@ -188,11 +188,9 @@ cython_debug/
 .pypirc
 # Large files
 data/processed_data/*.npy
-models/*.pth
 models/*.h5
 data/preprocessing/
 data/processed_data/*.npy
-models/*.pth
 models/*.h5
 
 .gitkeep
