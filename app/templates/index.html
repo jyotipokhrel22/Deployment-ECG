@@ -3,367 +3,804 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CardioAI - ECG Classifier</title>
+    <title>CardioAI - Advanced ECG Analysis</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
-            color: #2c3e50;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            color: #334155;
+            line-height: 1.6;
+            min-height: 100vh;
         }
-        
-        .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .container {
+
+        .app-container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 30px;
+            padding: 20px;
         }
 
-        .control-panel {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        
-        .upload-area {
-            border: 2px dashed #ced4da;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            background: #f8f9fa;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .upload-area:hover { border-color: #2a5298; background: #e8f0fe; }
-        
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 10px 5px;
-        }
-        
-        .btn-primary {
-            background: #2a5298;
+        /* Header */
+        .app-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-        }
-        
-        .btn-primary:hover { background: #1e3c72; }
-        
-        .result-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            display: none;
-        }
-        
-        .result-card.show { display: block; }
-        
-        .diagnosis-box {
-            padding: 25px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .metric { text-align: center; padding: 15px; }
-        
-        .metric-value {
-            font-size: 2em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .metric-label {
-            font-size: 0.9em;
-            color: #6c757d;
-        }
-        
-        .visualization img {
-            max-width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 40px;
-        }
-        
-        .loading.show { display: block; }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #2a5298;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .probability-bar {
-            height: 30px;
-            background: #e9ecef;
-            border-radius: 15px;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+            margin-bottom: 30px;
+            position: relative;
             overflow: hidden;
-            margin: 10px 0;
         }
-        
-        .probability-fill {
-            height: 100%;
+
+        .app-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .app-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            padding-left: 10px;
-            color: white;
-            font-weight: bold;
-            transition: width 1s ease;
-        }
-        
-        input[type="file"] { display: none; }
-        
-        .patient-input {
-            margin-bottom: 15px;
-        }
-        
-        .patient-input label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        .patient-input input, .patient-input select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            font-size: 1em;
-        }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
+            gap: 15px;
         }
 
+        .app-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Upload Section */
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 50px 30px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: #f0f7ff;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: #e0f2fe;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3.5rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--dark);
+        }
+
+        .upload-subtext {
+            font-size: 0.95rem;
+            color: var(--secondary);
+            margin-bottom: 20px;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            color: var(--success);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        /* Chart Controls */
         .chart-controls {
             display: flex;
             gap: 10px;
-            margin-bottom: 15px;
-            justify-content: center;
+            margin-bottom: 20px;
             flex-wrap: wrap;
         }
 
         .control-btn {
-            padding: 8px 16px;
+            padding: 10px 16px;
             background: white;
-            border: 1px solid #2a5298;
-            border-radius: 6px;
-            color: #2a5298;
-            font-size: 0.9em;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--secondary);
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .control-btn:hover {
-            background: #2a5298;
+            background: var(--primary);
             color: white;
+            border-color: var(--primary);
         }
 
         .control-btn:active {
             transform: scale(0.95);
         }
 
-        .ecg-chart-wrapper {
+        /* ECG Chart */
+        .ecg-chart-container {
             position: relative;
-        }
-
-        #ecgChart {
-            cursor: grab;
-            transition: transform 0.3s ease;
-        }
-
-        #ecgChart:active {
-            cursor: grabbing;
-        }
-
-        #ecgChart:hover {
-            transform: scale(1.02);
+            height: 350px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
         }
 
         .zoom-indicator {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(42, 82, 152, 0.9);
+            top: 15px;
+            right: 15px;
+            background: rgba(37, 99, 235, 0.9);
             color: white;
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 0.85em;
             font-weight: 600;
             z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Results Section */
+        .results-card {
+            display: none;
+            margin-top: 25px;
+        }
+
+        .results-card.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .diagnosis-header {
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--primary);
+        }
+
+        .diagnosis-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .diagnosis-description {
+            font-size: 1.1rem;
+            color: var(--secondary);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .probability-bars {
+            margin: 25px 0;
+        }
+
+        .probability-item {
+            margin: 15px 0;
+        }
+
+        .probability-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .probability-name {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .probability-value {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .probability-bar {
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            border-radius: 6px;
+            transition: width 1s ease;
+        }
+
+        .recommendation-box {
+            padding: 20px;
+            background: #fff9e6;
+            border: 1px solid #ffd966;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .clinical-notes {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        /* Attention Visualization Section */
+        .attention-section {
+            display: none;
+            margin-top: 25px;
+        }
+
+        .attention-section.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .attention-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .attention-tab {
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--secondary);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .attention-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .attention-tab:hover:not(.active) {
+            background: #f1f5f9;
+            border-color: var(--primary);
+        }
+
+        .attention-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .attention-content.active {
+            display: block;
+        }
+
+        .attention-description {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .attention-image {
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .attention-image:hover {
+            transform: scale(1.02);
+        }
+
+        .attention-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .attention-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading State */
+        .loading-state {
+            display: none;
+            text-align: center;
+            padding: 60px 30px;
+        }
+
+        .loading-state.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #e2e8f0;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Demo Select */
+        .demo-select {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: white;
+            color: var(--dark);
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        /* Footer */
+        .disclaimer {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 15px;
+            }
+            
+            .app-title {
+                font-size: 2rem;
+            }
+            
+            .main-grid {
+                gap: 15px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn, .demo-select {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .attention-tabs {
+                flex-direction: column;
+            }
+
+            .attention-tab {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="container">
-            <h1>🫀 CardioAI Clinical Platform</h1>
-            <p>AI-Assisted ECG Arrhythmia Classification System</p>
-        </div>
-    </div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="app-title">
+                <i class="fas fa-heart-pulse"></i>
+                CardioAI Clinical Platform
+            </h1>
+            <p class="app-subtitle">AI-Powered ECG Arrhythmia Detection & Analysis</p>
+        </header>
 
-    <div class="container">
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <!-- <h2>Patient Information</h2>
-            <div class="grid">
-                <div class="patient-input">
-                    <label>Patient ID</label>
-                    <input type="text" id="patientId" placeholder="ECG-2025-001">
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+            <!-- Left Column: Upload & Controls -->
+            <div class="card">
+                <h2 class="card-title">
+                    <i class="fas fa-upload"></i>
+                    ECG Data Input
+                </h2>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-csv"></i>
+                    </div>
+                    <div class="upload-text">Upload ECG CSV File</div>
+                    <div class="upload-subtext">360 samples • Single lead • CSV format</div>
+                    <button class="btn btn-outline">
+                        <i class="fas fa-folder-open"></i>
+                        Browse Files
+                    </button>
+                    <div class="file-name" id="fileName"></div>
                 </div>
-                <div class="patient-input">
-                    <label>Age</label>
-                    <input type="number" id="patientAge" placeholder="65">
-                </div>
-                <div class="patient-input">
-                    <label>Gender</label>
-                    <select id="patientGender">
-                        <option value="">Select...</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
+                <input type="file" id="fileInput" accept=".csv" style="display: none;">
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeECG()" disabled>
+                        <i class="fas fa-microscope"></i>
+                        Analyze ECG
+                    </button>
+                    
+                    <select class="demo-select" id="demoSelect" onchange="loadDemo(this.value)">
+                        <option value="" selected disabled>Load Demo Data</option>
+                        <option value="0">Demo 1: Normal Rhythm</option>
+                        <option value="1">Demo 2: Atrial Fibrillation</option>
+                        <option value="2">Demo 3: Ventricular Tachycardia</option>
+                        <option value="3">Demo 4: Sinus Bradycardia</option>
                     </select>
                 </div>
-            </div> -->
-
-            <h2 style="margin-top: 25px;">ECG Data Upload</h2>
-            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                <div style="font-size: 3em; margin-bottom: 10px;">📊</div>
-                <div style="font-size: 1.1em; margin-bottom: 5px;">Click to upload ECG CSV file</div>
-                <div style="font-size: 0.9em; color: #6c757d;">360 samples • Single lead • CSV format</div>
-                <div id="fileName" style="margin-top: 15px; color: #28a745; font-weight: 600;"></div>
             </div>
-            <input type="file" id="fileInput" accept=".csv" onchange="handleFileSelect(event)">
 
-           <div class="text-center mt-4">
-    <button class="btn btn-primary me-2" id="analyzeBtn" onclick="analyzeECG()" disabled>
-        🔬 Analyze ECG
-    </button>
-
-    <select class="form-select d-inline-block w-auto" id="demoSelect" onchange="loadDemo(this.value)">
-        <option value="" selected disabled>📋 Load Demo Data</option>
-        <option value="0">Demo Data 1</option>
-        <option value="1">Demo Data 2</option>
-        <option value="2">Demo Data 3</option>
-        <option value="3">Demo Data 4</option>
-    </select>
-</div>
-
-            <!-- ECG Preview Chart -->
-            <div id="ecgPreviewContainer" style="margin-top: 40px; display: none;">
-                <h3 style="margin-bottom: 15px;">📈 ECG Signal Preview</h3>
+            <!-- Right Column: ECG Preview -->
+            <div class="card">
+                <h2 class="card-title">
+                    <i class="fas fa-wave-square"></i>
+                    ECG Signal Preview
+                </h2>
                 
                 <div class="chart-controls">
-                    <button class="control-btn" onclick="zoomIn()">🔍 Zoom In</button>
-                    <button class="control-btn" onclick="zoomOut()">🔍 Zoom Out</button>
-                    <button class="control-btn" onclick="resetZoom()">↺ Reset View</button>
-                    <button class="control-btn" onclick="panLeft()">← Pan Left</button>
-                    <button class="control-btn" onclick="panRight()">Pan Right →</button>
+                    <button class="control-btn" onclick="zoomIn()">
+                        <i class="fas fa-search-plus"></i>
+                        Zoom In
+                    </button>
+                    <button class="control-btn" onclick="zoomOut()">
+                        <i class="fas fa-search-minus"></i>
+                        Zoom Out
+                    </button>
+                    <button class="control-btn" onclick="resetZoom()">
+                        <i class="fas fa-expand"></i>
+                        Reset View
+                    </button>
+                    <button class="control-btn" onclick="panLeft()">
+                        <i class="fas fa-arrow-left"></i>
+                        Pan Left
+                    </button>
+                    <button class="control-btn" onclick="panRight()">
+                        <i class="fas fa-arrow-right"></i>
+                        Pan Right
+                    </button>
                 </div>
 
-                <div class="ecg-chart-wrapper">
+                <div class="ecg-chart-container">
                     <div class="zoom-indicator" id="zoomIndicator">100%</div>
-                    <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
-                        <canvas id="ecgChart" style="height: 300px;"></canvas>
-                    </div>
+                    <canvas id="ecgChart"></canvas>
                 </div>
             </div>
         </div>
 
         <!-- Loading State -->
-        <div class="loading" id="loadingState">
+        <div class="loading-state" id="loadingState">
             <div class="spinner"></div>
-            <div style="font-size: 1.2em; color: #6c757d;">Analyzing ECG Signal...</div>
-            <div style="font-size: 0.9em; color: #adb5bd; margin-top: 10px;">
-                Processing with multi-attention neural network
-            </div>
+            <h3>Analyzing ECG Signal</h3>
+            <p>Processing with advanced neural network architecture</p>
         </div>
 
-        <!-- Results -->
-        <div class="result-card" id="resultsCard">
-            <h2>Analysis Results</h2>
-            <div class="diagnosis-box" id="diagnosisBox">
-                <h1 id="diagnosisTitle" style="margin-bottom: 10px;"></h1>
-                <p id="diagnosisDesc" style="font-size: 1.1em; color: #666;"></p>
+        <!-- Results Section -->
+        <div class="card results-card" id="resultsCard">
+            <h2 class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Analysis Results
+            </h2>
+            
+            <div class="diagnosis-header" id="diagnosisBox">
+                <h1 class="diagnosis-title" id="diagnosisTitle">
+                    <i class="fas fa-heartbeat"></i>
+                    Normal Sinus Rhythm
+                </h1>
+                <p class="diagnosis-description" id="diagnosisDesc">
+                    Regular rhythm with normal P waves, PR interval, and QRS complex
+                </p>
             </div>
 
-            <div class="grid">
-                <div class="metric">
-                    <div class="metric-value" id="confidenceValue">0%</div>
-                    <div class="metric-label">Confidence</div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="confidenceValue">95.2%</div>
+                    <div class="metric-label">Confidence Score</div>
                 </div>
-                <div class="metric">
-                    <div class="metric-value" id="severityValue">-</div>
-                    <div class="metric-label">Severity</div>
+                <div class="metric-card">
+                    <div class="metric-value" id="severityValue">Low</div>
+                    <div class="metric-label">Severity Level</div>
                 </div>
-                <div class="metric">
-                    <div class="metric-value" id="reconstructionError">-</div>
+                <div class="metric-card">
+                    <div class="metric-value" id="reconstructionError">0.00234</div>
                     <div class="metric-label">Reconstruction MSE</div>
                 </div>
             </div>
 
-            <div id="recommendationBox" style="padding: 20px; background: #fff9e6; border: 2px solid #ffd966; border-radius: 8px; margin: 20px 0;">
-                <h3 style="color: #856404; margin-bottom: 10px;">⚕️ Clinical Recommendation</h3>
-                <p id="recommendationText" style="color: #856404; margin: 0;"></p>
+            <div class="recommendation-box">
+                <h3><i class="fas fa-stethoscope"></i> Clinical Recommendation</h3>
+                <p id="recommendationText">No immediate action required. Routine follow-up recommended.</p>
             </div>
 
-            <h3>Probability Distribution</h3>
-            <div id="probabilityBars"></div>
-
-            <h3 style="margin-top: 30px;">ECG Signal Analysis</h3>
-            <div class="visualization">
-                <img id="visualizationImg" src="" alt="ECG Visualization" style="display: none;">
+            <h3 class="card-title">
+                <i class="fas fa-chart-bar"></i>
+                Probability Distribution
+            </h3>
+            <div class="probability-bars" id="probabilityBars">
+                <!-- Probability bars will be inserted here -->
             </div>
 
-            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                <h3>📋 Clinical Notes</h3>
-                <p id="clinicalNotes" style="color: #495057;"></p>
+            <div class="clinical-notes">
+                <h3><i class="fas fa-notes-medical"></i> Clinical Notes</h3>
+                <p id="clinicalNotes">The ECG shows normal sinus rhythm with no significant abnormalities detected. All intervals are within normal ranges.</p>
+            </div>
+        </div>
+
+        <!-- NEW: Attention Visualization Section -->
+        <div class="card attention-section" id="attentionSection">
+            <h2 class="card-title">
+                <i class="fas fa-eye"></i>
+                AI Attention Visualization
+            </h2>
+            
+            <div class="attention-description">
+                <h4><i class="fas fa-info-circle"></i> Understanding Model Focus</h4>
+                <p>These visualizations show which parts of the ECG signal the AI model focused on when making its diagnosis. The attention maps highlight clinically relevant features that contributed to the classification decision.</p>
+            </div>
+
+            <div class="attention-tabs">
+                <button class="attention-tab active" onclick="switchAttentionTab('overview')">
+                    <i class="fas fa-chart-line"></i>
+                    Signal Overview
+                </button>
+                <button class="attention-tab" onclick="switchAttentionTab('heatmaps')">
+                    <i class="fas fa-fire"></i>
+                    Attention Heatmaps
+                </button>
+                <button class="attention-tab" onclick="switchAttentionTab('overlay')">
+                    <i class="fas fa-layer-group"></i>
+                    Attention Overlay
+                </button>
+                <!-- <button class="attention-tab" onclick="switchAttentionTab('probabilities')">
+                    <i class="fas fa-chart-bar"></i>
+                    Class Probabilities
+                </button> -->
+            </div>
+
+            <!-- Signal Overview Tab -->
+            <div class="attention-content active" id="overviewTab">
+                <h4><i class="fas fa-wave-square"></i> ECG Signal with Attention Focus</h4>
+                <p>This visualization shows the original ECG signal with attention weights overlaid. The blue highlighted areas indicate where the model focused most attention during analysis.</p>
+                
+                <img id="overviewImage" src="" alt="ECG Overview" class="attention-image" style="display: none;">
+                <div id="overviewPlaceholder" class="text-center py-5">
+                    <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                    <p>Analysis results will appear here after processing</p>
+                </div>
+            </div>
+
+            <!-- Attention Heatmaps Tab -->
+            <div class="attention-content" id="heatmapsTab">
+                <h4><i class="fas fa-fire"></i> Attention Mechanism Analysis</h4>
+                <p>Heatmaps showing how the model distributes attention across different features and time steps. This reveals the internal reasoning process of the AI.</p>
+                
+                <div class="attention-grid">
+                    <div>
+                        <h5>Clinical Attention</h5>
+                        <img id="clinicalHeatmap" src="" alt="Clinical Attention Heatmap" class="attention-image" style="display: none;">
+                    </div>
+                    <div>
+                        <h5>Temporal Attention</h5>
+                        <img id="temporalHeatmap" src="" alt="Temporal Attention Heatmap" class="attention-image" style="display: none;">
+                    </div>
+                </div>
+                
+                <div id="heatmapsPlaceholder" class="text-center py-5">
+                    <i class="fas fa-chart-area fa-3x text-muted mb-3"></i>
+                    <p>Attention heatmaps will appear here after processing</p>
+                </div>
+            </div>
+
+            <!-- Attention Overlay Tab -->
+            <div class="attention-content" id="overlayTab">
+                <h4><i class="fas fa-layer-group"></i> Attention Intensity Mapping</h4>
+                <p>The ECG signal colored by attention intensity. Red segments indicate high attention areas, while green segments show low attention regions.</p>
+                
+                <img id="overlayImage" src="" alt="Attention Overlay" class="attention-image" style="display: none;">
+                <div id="overlayPlaceholder" class="text-center py-5">
+                    <i class="fas fa-palette fa-3x text-muted mb-3"></i>
+                    <p>Attention overlay visualization will appear here after processing</p>
+                </div>
+            </div>
+
+            <!-- Class Probabilities Tab -->
+            <div class="attention-content" id="probabilitiesTab">
+                <h4><i class="fas fa-chart-bar"></i> Detailed Probability Analysis</h4>
+                <p>Detailed breakdown of probabilities for all arrhythmia classes. This shows the model's confidence distribution across different diagnostic categories.</p>
+                
+                <img id="probabilitiesImage" src="" alt="Probability Chart" class="attention-image" style="display: none;">
+                <div id="probabilitiesPlaceholder" class="text-center py-5">
+                    <i class="fas fa-percentage fa-3x text-muted mb-3"></i>
+                    <p>Probability analysis will appear here after processing</p>
+                </div>
             </div>
         </div>
 
         <!-- Disclaimer -->
-        <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; margin-top: 25px;">
-            <h3 style="color: #856404; margin-bottom: 10px;">⚠️ Medical Disclaimer</h3>
-            <p style="color: #856404; margin: 0;">
-                This AI-powered diagnostic tool is for research and educational purposes only. 
-                All findings must be verified by a qualified cardiologist or physician. 
-                Do not use as the sole basis for clinical decisions.
-            </p>
+        <div class="disclaimer">
+            <h3><i class="fas fa-exclamation-triangle"></i> Medical Disclaimer</h3>
+            <p>This AI-powered diagnostic tool is for research and educational purposes only. All findings must be verified by a qualified cardiologist or physician. Do not use as the sole basis for clinical decisions.</p>
         </div>
     </div>
 
@@ -372,11 +809,97 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // Initialize variables
         let ecgData = null;
         let ecgChart = null;
         let currentZoom = 1;
         let panOffset = 0;
 
+        // Set up event listeners when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // File upload handling
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            // Drag and drop functionality
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelect({ target: fileInput });
+                }
+            });
+            
+            fileInput.addEventListener('change', handleFileSelect);
+        });
+
+        // Attention Visualization Functions
+        function switchAttentionTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.attention-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.attention-tab').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+
+        function displayAttentionVisualizations(visualizations) {
+            // Show the attention section
+            document.getElementById('attentionSection').classList.add('show');
+            
+            // Update all visualization images
+            if (visualizations.main_analysis) {
+                document.getElementById('overviewImage').src = 'data:image/png;base64,' + visualizations.main_analysis;
+                document.getElementById('overviewImage').style.display = 'block';
+                document.getElementById('overviewPlaceholder').style.display = 'none';
+            }
+            
+            if (visualizations.attention_heatmaps) {
+                document.getElementById('clinicalHeatmap').src = 'data:image/png;base64,' + visualizations.attention_heatmaps;
+                document.getElementById('clinicalHeatmap').style.display = 'block';
+                document.getElementById('temporalHeatmap').src = 'data:image/png;base64,' + visualizations.attention_heatmaps;
+                document.getElementById('temporalHeatmap').style.display = 'block';
+                document.getElementById('heatmapsPlaceholder').style.display = 'none';
+            }
+            
+            if (visualizations.attention_overlay) {
+                document.getElementById('overlayImage').src = 'data:image/png;base64,' + visualizations.attention_overlay;
+                document.getElementById('overlayImage').style.display = 'block';
+                document.getElementById('overlayPlaceholder').style.display = 'none';
+            }
+            
+            if (visualizations.probability_chart) {
+                document.getElementById('probabilitiesImage').src = 'data:image/png;base64,' + visualizations.probability_chart;
+                document.getElementById('probabilitiesImage').style.display = 'block';
+                document.getElementById('probabilitiesPlaceholder').style.display = 'none';
+            }
+            
+            // Scroll to attention section
+            document.getElementById('attentionSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Existing ECG functions
         function showECGPreview(signal) {
             if (!signal || signal.length === 0) return;
 
@@ -400,23 +923,26 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Original ECG',
+                        label: 'ECG Signal',
                         data: visibleSignal,
-                        borderColor: '#2a5298',
-                        backgroundColor: 'rgba(42, 82, 152, 0.02)',
-                        borderWidth: 1.5,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                        borderWidth: 2,
                         fill: true,
                         tension: 0,
                         pointRadius: 0,
-                        pointHoverRadius: 0
+                        pointHoverRadius: 3,
+                        pointHoverBackgroundColor: '#2563eb',
+                        pointHoverBorderColor: '#ffffff',
+                        pointHoverBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: {
-                        duration: 800,
-                        easing: 'easeInOutQuart'
+                        duration: 1000,
+                        easing: 'easeOutQuart'
                     },
                     interaction: {
                         intersect: false,
@@ -426,23 +952,24 @@
                         legend: {
                             display: true,
                             position: 'top',
-                            align: 'end',
                             labels: {
-                                font: { size: 12, weight: '500' },
-                                color: '#2c3e50',
-                                padding: 10,
-                                boxWidth: 40,
-                                boxHeight: 2,
-                                usePointStyle: false
+                                color: '#334155',
+                                font: {
+                                    size: 12,
+                                    weight: '600'
+                                },
+                                padding: 15,
+                                usePointStyle: true,
+                                pointStyle: 'line'
                             }
                         },
                         tooltip: {
                             enabled: true,
-                            backgroundColor: 'rgba(44, 62, 80, 0.95)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            padding: 10,
-                            cornerRadius: 6,
+                            backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#f8fafc',
+                            padding: 12,
+                            cornerRadius: 8,
                             displayColors: false,
                             callbacks: {
                                 title: function(context) {
@@ -452,72 +979,51 @@
                                     return 'Amplitude: ' + context.parsed.y.toFixed(4) + ' mV';
                                 }
                             }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Original ECG Signal',
-                            font: { size: 16, weight: '600' },
-                            color: '#2c3e50',
-                            padding: { top: 10, bottom: 20 }
                         }
                     },
                     scales: {
                         x: {
                             title: {
-                                display: false
+                                display: true,
+                                text: 'Time (seconds)',
+                                color: '#64748b',
+                                font: {
+                                    size: 12,
+                                    weight: '600'
+                                }
                             },
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.08)',
-                                drawBorder: true,
-                                lineWidth: 1
+                                color: 'rgba(100, 116, 139, 0.1)',
+                                drawBorder: false
                             },
                             ticks: {
-                                maxTicksLimit: 10,
-                                color: '#6c757d',
-                                font: { size: 10 },
-                                padding: 5
-                            },
-                            border: {
-                                color: '#2c3e50',
-                                width: 1
+                                color: '#64748b',
+                                maxTicksLimit: 8
                             }
                         },
                         y: {
                             title: {
                                 display: true,
-                                text: 'Amplitude (normalized)',
-                                color: '#2c3e50',
-                                font: { size: 11, weight: '500' }
+                                text: 'Amplitude (mV)',
+                                color: '#64748b',
+                                font: {
+                                    size: 12,
+                                    weight: '600'
+                                }
                             },
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.08)',
-                                drawBorder: true,
-                                lineWidth: 1
+                                color: 'rgba(100, 116, 139, 0.1)',
+                                drawBorder: false
                             },
                             ticks: {
-                                color: '#6c757d',
-                                font: { size: 10 },
-                                padding: 5,
-                                maxTicksLimit: 8
-                            },
-                            border: {
-                                color: '#2c3e50',
-                                width: 1
+                                color: '#64748b',
+                                maxTicksLimit: 6
                             }
-                        }
-                    },
-                    layout: {
-                        padding: {
-                            left: 10,
-                            right: 20,
-                            top: 0,
-                            bottom: 10
                         }
                     }
                 }
             });
 
-            document.getElementById('ecgPreviewContainer').style.display = 'block';
             updateZoomIndicator();
         }
 
@@ -585,78 +1091,100 @@
                 ecgData = data.demo_ecg_data[idx];
                 document.getElementById('fileName').textContent = '✓ Demo data loaded';
                 document.getElementById('analyzeBtn').disabled = false;
-                document.getElementById('patientId').value = 'DEMO-' + Date.now();
-                document.getElementById('patientAge').value = '65';
-                document.getElementById('patientGender').value = 'male';
                 currentZoom = 1;
                 panOffset = 0;
                 showECGPreview(ecgData);
-                alert('Demo data loaded successfully!');
             } catch (error) {
                 alert('Error loading demo data: ' + error.message);
             }
         }
 
         async function analyzeECG() {
-    if (!ecgData) {
-        alert('Please upload ECG data first');
-        return;
-    }
+            if (!ecgData) {
+                alert('Please upload ECG data first');
+                return;
+            }
 
-    document.getElementById('loadingState').classList.add('show');
-    document.getElementById('resultsCard').classList.remove('show');
+            document.getElementById('loadingState').classList.add('show');
+            document.getElementById('resultsCard').classList.remove('show');
+            document.getElementById('attentionSection').classList.remove('show');
 
-    try {
-        const formData = new FormData();
-        formData.append('ecg_data', JSON.stringify(ecgData));
-        // Patient information fields removed from formData
+            try {
+                const formData = new FormData();
+                formData.append('ecg_data', JSON.stringify(ecgData));
 
-        const response = await fetch('/predict', { method: 'POST', body: formData });
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-        displayResults(result);
-    } catch (error) {
-        alert('Error: ' + error.message);
-    } finally {
-        document.getElementById('loadingState').classList.remove('show');
-    }
-}
+                const response = await fetch('/predict', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.error) throw new Error(result.error);
+                
+                displayResults(result);
+                
+                // Display attention visualizations if available
+                if (result.visualizations) {
+                    displayAttentionVisualizations(result.visualizations);
+                }
+                
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                document.getElementById('loadingState').classList.remove('show');
+            }
+        }
 
         function displayResults(result) {
             document.getElementById('resultsCard').classList.add('show');
+            
+            // Update diagnosis
             const diagnosisBox = document.getElementById('diagnosisBox');
-            diagnosisBox.style.backgroundColor = result.color + '22';
-            diagnosisBox.style.borderLeft = `5px solid ${result.color}`;
-            document.getElementById('diagnosisTitle').textContent = `${result.icon} ${result.class_name}`;
+            diagnosisBox.style.backgroundColor = result.color + '15';
+            diagnosisBox.style.borderLeftColor = result.color;
+            document.getElementById('diagnosisTitle').innerHTML = `<i class="${result.icon}"></i> ${result.class_name}`;
             document.getElementById('diagnosisTitle').style.color = result.color;
             document.getElementById('diagnosisDesc').textContent = result.description;
+            
+            // Update metrics
             document.getElementById('confidenceValue').textContent = result.confidence.toFixed(1) + '%';
             document.getElementById('severityValue').textContent = result.severity;
             document.getElementById('reconstructionError').textContent = result.reconstruction_error.toFixed(6);
             document.getElementById('recommendationText').textContent = result.recommendation;
             document.getElementById('clinicalNotes').textContent = result.clinical_notes;
 
+            // Update probability bars with full names
             const probabilityBars = document.getElementById('probabilityBars');
             probabilityBars.innerHTML = '';
+            
+            // Define full names mapping
+            const fullNames = {
+                'N': 'Normal Sinus Rhythm',
+                'S': 'Supraventricular Ectopic Beat', 
+                'V': 'Ventricular Ectopic Beat',
+                'F': 'Fusion Beat',
+                'Q': 'Unknown/Paced Beat'
+            };
+            
             for (const [className, prob] of Object.entries(result.all_probabilities)) {
+                const fullName = fullNames[className] || className;
                 const barHtml = `
-                    <div style="margin: 15px 0;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                            <span style="font-weight: 600;">${className}</span>
-                            <span style="font-weight: bold;">${prob.toFixed(2)}%</span>
+                    <div class="probability-item">
+                        <div class="probability-header">
+                            <span class="probability-name">${fullName}</span>
+                            <span class="probability-value">${prob.toFixed(2)}%</span>
                         </div>
                         <div class="probability-bar">
-                            <div class="probability-fill" style="width: ${prob}%; background: linear-gradient(90deg, #2a5298, #1e3c72);"></div>
+                            <div class="probability-fill" style="width: ${prob}%"></div>
                         </div>
                     </div>`;
                 probabilityBars.innerHTML += barHtml;
             }
 
-            const img = document.getElementById('visualizationImg');
-            img.src = 'data:image/png;base64,' + result.visualization;
-            img.style.display = 'block';
+            // Scroll to results
             document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
         }
+
+        // Initialize with empty state
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("CardioAI Platform Initialized");
+        });
     </script>
 </body>
 </html>

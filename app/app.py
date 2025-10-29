@@ -6,16 +6,13 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.model_service import ModelService 
-from app.visualization import create_visualization_html
-# from visualization import create_visualization
+from app.visualization import create_visualization_html, create_comprehensive_report
 import numpy as np
 import json
 from datetime import datetime
 
-
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-# app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change in production
 
 # Initialize model service
 print("Loading model service...")
@@ -31,7 +28,7 @@ CLASS_INFO = {
         'name': 'Normal Sinus Rhythm',
         'description': 'Normal heartbeat with regular rhythm and no abnormalities detected.',
         'color': '#28a745',
-        'icon': '',
+        'icon': 'fas fa-heartbeat',
         'recommendation': 'No immediate action required. Continue routine cardiac monitoring.',
         'severity': 'Low',
         'clinical_notes': 'P wave, QRS complex, and T wave are within normal limits. No arrhythmia detected.'
@@ -40,7 +37,7 @@ CLASS_INFO = {
         'name': 'Supraventricular Ectopic Beat',
         'description': 'Premature beat originating from the upper chambers of the heart (atria).',
         'color': '#ffc107',
-        'icon': '⚠️',
+        'icon': 'fas fa-exclamation-triangle',
         'recommendation': 'Monitor frequency. If symptoms persist or worsen, consult a cardiologist.',
         'severity': 'Medium',
         'clinical_notes': 'Early P wave with abnormal morphology. May cause palpitations. Usually benign if infrequent.'
@@ -49,7 +46,7 @@ CLASS_INFO = {
         'name': 'Ventricular Ectopic Beat',
         'description': 'Premature beat originating from the lower chambers of the heart (ventricles).',
         'color': '#fd7e14',
-        'icon': '⚠️',
+        'icon': 'fas fa-exclamation-triangle',
         'recommendation': 'Medical evaluation recommended. Frequent VEBs may require treatment.',
         'severity': 'Medium-High',
         'clinical_notes': 'Wide QRS complex (>0.12s) without preceding P wave. Requires follow-up if frequent or symptomatic.'
@@ -58,7 +55,7 @@ CLASS_INFO = {
         'name': 'Fusion Beat',
         'description': 'Combined beat resulting from simultaneous normal and ventricular activation.',
         'color': '#e83e8c',
-        'icon': '🔴',
+        'icon': 'fas fa-heart-crack',
         'recommendation': 'Specialist consultation advised. Requires detailed cardiac evaluation.',
         'severity': 'High',
         'clinical_notes': 'QRS morphology shows characteristics of both normal and ventricular beats. Indicates ventricular irritability.'
@@ -67,7 +64,7 @@ CLASS_INFO = {
         'name': 'Unknown/Paced Beat',
         'description': 'Unclassifiable beat or pacemaker-induced cardiac activity.',
         'color': '#6c757d',
-        'icon': '❓',
+        'icon': 'fas fa-question-circle',
         'recommendation': 'Further analysis needed. Check pacemaker function if applicable.',
         'severity': 'Variable',
         'clinical_notes': 'Cannot definitively classify. May indicate pacemaker artifact or noise. Manual review recommended.'
@@ -125,27 +122,14 @@ def predict():
         elif len(ecg_data) > 360:
             ecg_data = ecg_data[:360]
         
-        # Get patient info from request
-        # patient_info = {
-        #     'id': request.form.get('patient_id', 'N/A'),
-        #     'age': request.form.get('patient_age', 'N/A'),
-        #     'gender': request.form.get('patient_gender', 'N/A')
-        # }
-        
         # Make prediction
         result = model_service.predict(ecg_data)
         
         if result is None:
             return jsonify({'error': 'Prediction failed'}), 500
         
-        # Create visualization
-        visualization_html = create_visualization_html(
-            original=result['original'],
-            reconstructed=result['reconstructed'],
-            clinical_attention=result['clinical_attention'],
-            predicted_class=result['class'],
-            class_info=CLASS_INFO
-        )
+        # Create comprehensive visualizations
+        visualizations = create_comprehensive_report(result, CLASS_INFO)
         
         # Get class information
         class_info = CLASS_INFO[result['class']]
@@ -162,7 +146,7 @@ def predict():
             'color': class_info['color'],
             'icon': class_info['icon'],
             'all_probabilities': {k: v*100 for k, v in result['all_probabilities'].items()},
-            'visualization': visualization_html,
+            'visualization': visualizations['main_analysis'],  # Keep for backward compatibility
             'reconstruction_error': float(result['reconstruction_error']),
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'attention_stats': {
@@ -170,6 +154,14 @@ def predict():
                 'clinical_attention_mean': float(np.mean(result['clinical_attention'])),
                 'temporal_attention_max': float(np.max(result['temporal_attention'])),
                 'temporal_attention_mean': float(np.mean(result['temporal_attention']))
+            },
+            # NEW: Comprehensive visualizations for attention section
+            'visualizations': {
+                'main_analysis': visualizations['main_analysis'],
+                'attention_heatmaps': visualizations['attention_heatmaps'],
+                'probability_chart': visualizations['probability_chart'],
+                'attention_overlay': visualizations['attention_overlay']
+                # Removed 'comparison' since it's no longer generated
             }
         }
         
@@ -183,7 +175,7 @@ def predict():
 
 @app.route('/demo', methods=['GET'])
 def demo():
-    """Load demo ECG data (from CSV files if available, else synthetic fallback)."""
+    """Load demo ECG data"""
     try:
         base_path = 'data/test_datasets/csv_ecg_signal'
         csv_files = {
@@ -196,21 +188,20 @@ def demo():
         ecg_data = {}
         messages = []
 
-        # ✅ Load first 4 ECGs from CSV files if available
+        # Load first 4 ECGs from CSV files if available
         csv_available = all(os.path.exists(p) for p in csv_files.values())
 
         if csv_available:
             for name, path in csv_files.items():
                 try:
                     df = pd.read_csv(path, header=None)
-                    # Flatten and convert to list (1D ECG signal)
                     ecg_signal = df.values.flatten().tolist()
                     ecg_data[name] = ecg_signal
                     messages.append(f'Loaded ECG from {name}.csv ({len(ecg_signal)} samples)')
                 except Exception as e:
                     messages.append(f'Failed to load {name}.csv: {e}')
         else:
-            # ⚙️ Fallback to synthetic data generation
+            # Fallback to synthetic data generation
             t = np.linspace(0, 1, 360)
 
             normal_ecg = (
@@ -253,11 +244,89 @@ def demo():
             ]
 
         return jsonify({
-            'ecg_data': ecg_data,
+            'demo_ecg_data': [
+                ecg_data['normal'],
+                ecg_data['pvc'], 
+                ecg_data['fusion'],
+                ecg_data['supra']
+            ],
             'messages': messages
         })
 
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/attention-analysis', methods=['POST'])
+def attention_analysis():
+    """Endpoint for interactive attention analysis with custom parameters"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'ecg_data' not in data:
+            return jsonify({'error': 'No ECG data provided'}), 400
+        
+        ecg_data = np.array(data['ecg_data'])
+        attention_threshold = data.get('attention_threshold', 0.7)
+        
+        # Validate and adjust length
+        if len(ecg_data) < 360:
+            ecg_data = np.pad(ecg_data, (0, 360 - len(ecg_data)), mode='constant')
+        elif len(ecg_data) > 360:
+            ecg_data = ecg_data[:360]
+        
+        # Make prediction
+        result = model_service.predict(ecg_data)
+        
+        if result is None:
+            return jsonify({'error': 'Prediction failed'}), 500
+        
+        # Create custom visualization with threshold
+        from app.visualization import create_attention_overlay_plot, create_visualization_html
+        
+        # Create visualization with custom threshold - UPDATED SIGNATURE
+        visualization_html = create_visualization_html(
+            original=result['original'],
+            clinical_attention=result['clinical_attention'],
+            predicted_class=result['class'],
+            class_info=CLASS_INFO
+        )
+        
+        # Create attention overlay with custom threshold
+        attention_overlay = create_attention_overlay_plot(
+            original=result['original'],
+            clinical_attention=result['clinical_attention']
+        )
+        
+        # Calculate attention regions based on threshold
+        clinical_att_avg = np.mean(result['clinical_attention'], axis=0)
+        clinical_att_upsampled = np.interp(
+            np.linspace(0, len(clinical_att_avg)-1, len(result['original'])),
+            np.arange(len(clinical_att_avg)),
+            clinical_att_avg
+        )
+        clinical_att_normalized = (clinical_att_upsampled - clinical_att_upsampled.min()) / \
+                                 (clinical_att_upsampled.max() - clinical_att_upsampled.min() + 1e-8)
+        
+        high_attention_indices = np.where(clinical_att_normalized > attention_threshold)[0]
+        
+        response = {
+            'visualization': visualization_html,
+            'attention_overlay': attention_overlay,
+            'attention_regions': high_attention_indices.tolist(),
+            'attention_stats': {
+                'threshold': attention_threshold,
+                'high_attention_regions': len(high_attention_indices),
+                'total_regions': len(clinical_att_normalized),
+                'coverage_percentage': (len(high_attention_indices) / len(clinical_att_normalized)) * 100
+            }
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in attention analysis: {e}")
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/health', methods=['GET'])
@@ -278,15 +347,16 @@ def model_info():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.errorhandler(404)
-def not_found(e):
-    """Handle 404 errors"""
-    return render_template('404.html'), 404
+# Comment out error handlers until templates are created
+# @app.errorhandler(404)
+# def not_found(e):
+#     """Handle 404 errors"""
+#     return render_template('404.html'), 404
 
-@app.errorhandler(500)
-def server_error(e):
-    """Handle 500 errors"""
-    return render_template('500.html'), 500
+# @app.errorhandler(500)
+# def server_error(e):
+#     """Handle 500 errors"""
+#     return render_template('500.html'), 500
 
 if __name__ == '__main__':
     print("=" * 80)

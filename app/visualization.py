@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import io
 import base64
 
-def create_visualization_html(original, reconstructed, clinical_attention, 
-                              predicted_class, class_info):
+def create_visualization_html(original, clinical_attention, predicted_class, class_info):
     """
     Create comprehensive visualization of ECG with attention maps
     
@@ -14,8 +13,6 @@ def create_visualization_html(original, reconstructed, clinical_attention,
     -----------
     original: np.array
         Original preprocessed ECG signal
-    reconstructed: np.array
-        Reconstructed ECG signal from model
     clinical_attention: np.array
         Clinical attention weights
     predicted_class: str
@@ -50,24 +47,8 @@ def create_visualization_html(original, reconstructed, clinical_attention,
     ax1.axhspan(ax1.get_ylim()[0], ax1.get_ylim()[1], 
                 alpha=0.05, color=class_color, zorder=0)
     
-    # 2. Reconstructed ECG Signal
-    ax2 = axes[0]
-    ax2.plot(time_axis, original, linewidth=2, alpha=0.6, 
-            color='#2c3e50', linestyle='--', label='Original')
-    ax2.plot(time_axis, reconstructed, linewidth=2, 
-            color='#e74c3c', label='Reconstructed')
-    
-    # Calculate and display MSE
-    mse = np.mean((original - reconstructed)**2)
-    ax2.set_title(f'Reconstructed ECG Signal (MSE: {mse:.6f})', 
-                 fontsize=14, fontweight='bold', pad=15)
-    ax2.set_ylabel('Amplitude (normalized)', fontsize=12)
-    ax2.grid(True, alpha=0.3, linestyle='--')
-    ax2.legend(loc='upper right', fontsize=11)
-    ax2.set_xlim([0, time_axis[-1]])
-    
-    # 3. ECG with Clinical Attention Overlay
-    ax3 = axes[1]
+    # 2. ECG with Clinical Attention Overlay
+    ax2 = axes[1]
     
     # Upsample clinical attention to match signal length
     clinical_att_avg = np.mean(clinical_attention, axis=0)
@@ -82,41 +63,34 @@ def create_visualization_html(original, reconstructed, clinical_attention,
                              (clinical_att_upsampled.max() - clinical_att_upsampled.min() + 1e-8)
     
     # Plot ECG
-    ax3.plot(time_axis, original, linewidth=2, color='#2c3e50', 
+    ax2.plot(time_axis, original, linewidth=2, color='#2c3e50', 
             label='ECG Signal', zorder=2)
     
     # Create twin axis for attention
-    ax3_twin = ax3.twinx()
-    ax3_twin.fill_between(time_axis, clinical_att_normalized, 
+    ax2_twin = ax2.twinx()
+    ax2_twin.fill_between(time_axis, clinical_att_normalized, 
                           alpha=0.4, color='#3498db', label='Clinical Attention',
                           zorder=1)
-    ax3_twin.set_ylabel('Attention Weight', fontsize=12, color='#3498db')
-    ax3_twin.tick_params(axis='y', labelcolor='#3498db')
-    ax3_twin.set_ylim([0, 1.2])
+    ax2_twin.set_ylabel('Attention Weight', fontsize=12, color='#3498db')
+    ax2_twin.tick_params(axis='y', labelcolor='#3498db')
+    ax2_twin.set_ylim([0, 1.2])
     
-    ax3.set_title('ECG Signal with Clinical Attention Overlay', 
+    ax2.set_title('ECG Signal with Clinical Attention Overlay', 
                  fontsize=14, fontweight='bold', pad=15)
-    ax3.set_xlabel('Time (seconds)', fontsize=12)
-    ax3.set_ylabel('Amplitude (normalized)', fontsize=12)
-    ax3.grid(True, alpha=0.3, linestyle='--')
-    ax3.legend(loc='upper left', fontsize=11)
-    ax3.set_xlim([0, time_axis[-1]])
+    ax2.set_xlabel('Time (seconds)', fontsize=12)
+    ax2.set_ylabel('Amplitude (normalized)', fontsize=12)
+    ax2.grid(True, alpha=0.3, linestyle='--')
+    ax2.legend(loc='upper left', fontsize=11)
+    ax2.set_xlim([0, time_axis[-1]])
     
     # Add prediction info as text box
     prediction_text = f"Prediction: {class_info[predicted_class]['name']}"
-    ax3.text(0.02, 0.98, prediction_text,
-            transform=ax3.transAxes,
+    ax2.text(0.02, 0.98, prediction_text,
+            transform=ax2.transAxes,
             fontsize=12,
             fontweight='bold',
             verticalalignment='top',
             bbox=dict(boxstyle='round', facecolor=class_color, alpha=0.3))
-    
-    # Highlight regions with high attention
-    threshold = 0.7
-    high_attention_regions = clinical_att_normalized > threshold
-    for i in range(len(high_attention_regions) - 1):
-        if high_attention_regions[i]:
-            ax3.axvline(x=time_axis[i], color='red', alpha=0.1, linewidth=0.5)
     
     # Overall figure styling
     fig.suptitle(f'ECG Analysis Report - {class_info[predicted_class]["name"]}',
@@ -196,7 +170,7 @@ def create_attention_heatmap(clinical_attention, temporal_attention):
 
 def create_probability_bar_chart(probabilities, class_info):
     """
-    Create bar chart for class probabilities
+    Create bar chart for class probabilities with full names
     
     Parameters:
     -----------
@@ -210,89 +184,53 @@ def create_probability_bar_chart(probabilities, class_info):
     str: Base64 encoded image
     """
     
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    # Define full names mapping
+    full_names = {
+        'N': 'Normal Sinus Rhythm',
+        'S': 'Supraventricular Ectopic Beat', 
+        'V': 'Ventricular Ectopic Beat',
+        'F': 'Fusion Beat',
+        'Q': 'Unknown/Paced Beat'
+    }
     
     classes = list(probabilities.keys())
+    
+    # Use full names for display
+    display_names = [full_names.get(c, c) for c in classes]
     probs = [probabilities[c] * 100 for c in classes]
+    
+    # Use class colors from class_info
     colors = [class_info[c]['color'] for c in classes]
     
-    bars = ax.barh(classes, probs, color=colors, edgecolor='black', linewidth=1.5)
+    bars = ax.barh(display_names, probs, color=colors, edgecolor='black', 
+                   linewidth=1.5, alpha=0.8, height=0.7)
     
     # Add value labels on bars
     for i, (bar, prob) in enumerate(zip(bars, probs)):
         width = bar.get_width()
-        ax.text(width + 1, bar.get_y() + bar.get_height()/2,
+        ax.text(width + 0.5, bar.get_y() + bar.get_height()/2,
                f'{prob:.2f}%',
-               ha='left', va='center', fontweight='bold', fontsize=11)
+               ha='left', va='center', fontweight='bold', fontsize=12,
+               bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
     
-    ax.set_xlabel('Probability (%)', fontsize=12, fontweight='bold')
-    ax.set_ylabel('Arrhythmia Class', fontsize=12, fontweight='bold')
-    ax.set_title('Class Probability Distribution', fontsize=14, fontweight='bold', pad=15)
+    ax.set_xlabel('Probability (%)', fontsize=14, fontweight='bold')
+    ax.set_ylabel('Arrhythmia Class', fontsize=14, fontweight='bold')
+    ax.set_title('Class Probability Distribution', fontsize=16, fontweight='bold', pad=20)
     ax.set_xlim([0, 105])
     ax.grid(True, axis='x', alpha=0.3, linestyle='--')
     
-    # Add class names as y-labels
-    ax.set_yticks(range(len(classes)))
-    ax.set_yticklabels([f"{c} - {class_info[c]['name']}" for c in classes])
+    # Customize ticks and labels
+    ax.tick_params(axis='y', labelsize=12)
+    ax.tick_params(axis='x', labelsize=11)
+    
+    # Add some styling
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.5)
+        spine.set_color('#2c3e50')
     
     plt.tight_layout()
-    
-    # Convert to base64
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight',
-                facecolor='white', edgecolor='none')
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    plt.close(fig)
-    
-    return img_base64
-
-
-def create_comparison_plot(original, reconstructed):
-    """
-    Create side-by-side comparison of original vs reconstructed
-    
-    Parameters:
-    -----------
-    original: np.array
-        Original ECG signal
-    reconstructed: np.array
-        Reconstructed ECG signal
-    
-    Returns:
-    --------
-    str: Base64 encoded image
-    """
-    
-    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
-    
-    time_axis = np.arange(len(original)) / 360
-    
-    # Original
-    axes[0].plot(time_axis, original, linewidth=2, color='#2c3e50')
-    axes[0].set_title('Original ECG Signal', fontsize=13, fontweight='bold')
-    axes[0].set_ylabel('Amplitude', fontsize=11)
-    axes[0].grid(True, alpha=0.3)
-    axes[0].set_xlim([0, time_axis[-1]])
-    
-    # Reconstructed
-    axes[1].plot(time_axis, reconstructed, linewidth=2, color='#e74c3c')
-    axes[1].set_title('Reconstructed ECG Signal', fontsize=13, fontweight='bold')
-    axes[1].set_xlabel('Time (seconds)', fontsize=11)
-    axes[1].set_ylabel('Amplitude', fontsize=11)
-    axes[1].grid(True, alpha=0.3)
-    axes[1].set_xlim([0, time_axis[-1]])
-    
-    # Calculate and display reconstruction quality
-    mse = np.mean((original - reconstructed)**2)
-    correlation = np.corrcoef(original, reconstructed)[0, 1]
-    
-    fig.text(0.5, 0.02, 
-            f'Reconstruction Quality - MSE: {mse:.6f} | Correlation: {correlation:.4f}',
-            ha='center', fontsize=11, fontweight='bold',
-            bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5))
-    
-    plt.tight_layout(rect=[0, 0.04, 1, 1])
     
     # Convert to base64
     buf = io.BytesIO()
@@ -390,10 +328,9 @@ def create_comprehensive_report(result, class_info):
     
     visualizations = {}
     
-    # 1. Main ECG analysis
+    # 1. Main ECG analysis (without reconstruction)
     visualizations['main_analysis'] = create_visualization_html(
         result['original'],
-        result['reconstructed'],
         result['clinical_attention'],
         result['class'],
         class_info
@@ -405,19 +342,13 @@ def create_comprehensive_report(result, class_info):
         result['temporal_attention']
     )
     
-    # 3. Probability distribution
+    # 3. Probability distribution with full names
     visualizations['probability_chart'] = create_probability_bar_chart(
         result['all_probabilities'],
         class_info
     )
     
-    # 4. Comparison plot
-    visualizations['comparison'] = create_comparison_plot(
-        result['original'],
-        result['reconstructed']
-    )
-    
-    # 5. Attention overlay
+    # 4. Attention overlay
     visualizations['attention_overlay'] = create_attention_overlay_plot(
         result['original'],
         result['clinical_attention']
